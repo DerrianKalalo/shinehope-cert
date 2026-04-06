@@ -1,31 +1,17 @@
-import fs from 'fs'
-import path from 'path'
+import { supabase } from '../../lib/supabase'
 
-export default function handler(req, res) {
-  const filePath = path.join(process.cwd(), 'data', 'certificates.json')
-  const data = JSON.parse(fs.readFileSync(filePath, 'utf8'))
+export default async function handler(req, res) {
+  const { id } = req.query
 
-  // GET = verify / list
-  if (req.method === 'GET') {
-    const { id } = req.query
+  const { data, error } = await supabase
+    .from('certificates')
+    .select('*')
+    .eq('id', id)
+    .single()
 
-    if (id) {
-      const cert = data.find(c => c.id === id)
-      if (cert) return res.status(200).json(cert)
-      return res.status(404).json({ error: 'Not found' })
-    }
-
-    // return all certificates
-    return res.status(200).json(data)
+  if (error || !data) {
+    return res.status(404).json({ message: 'Certificate not found' })
   }
 
-  // DELETE certificate
-  if (req.method === 'DELETE') {
-    const { id } = req.body
-
-    const newData = data.filter(c => c.id !== id)
-    fs.writeFileSync(filePath, JSON.stringify(newData, null, 2))
-
-    return res.status(200).json({ message: 'Deleted' })
-  }
+  res.status(200).json(data)
 }
