@@ -1,26 +1,42 @@
 import QRCode from 'qrcode'
 import { supabase } from '../../lib/supabase'
 
-function generateID() {
-  return 'SHF-' + Math.random().toString(36).substr(2, 9).toUpperCase()
+function programCode(program) {
+  if (program === 'Volunteer') return 'VOL'
+  if (program === 'Internship') return 'INT'
+  if (program === 'Seminar') return 'SEM'
+  return 'GEN'
+}
+
+async function generateID(program) {
+  const code = programCode(program)
+
+  const { data } = await supabase
+    .from('certificates')
+    .select('id')
+    .like('id', `SHF-${code}-2026-%`)
+
+  const count = data.length + 1
+  const number = String(count).padStart(3, '0')
+
+  return `SHF-${code}-2026-${number}`
 }
 
 export default async function handler(req, res) {
   try {
     const { name, program } = req.body
 
-    const id = generateID()
+    const id = await generateID(program)
     const date = new Date().toLocaleDateString()
 
-    const verifyURL = `https://shinehope-cert.vercel.app/verify/${id}`
+    const verifyURL = `https://shinehope-cert.vercel.app/${id}`
     const qr = await QRCode.toDataURL(verifyURL)
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('certificates')
       .insert([{ id, name, program, date }])
 
     if (error) {
-      console.log(error)
       return res.status(500).json({ error: error.message })
     }
 
@@ -33,7 +49,6 @@ export default async function handler(req, res) {
     })
 
   } catch (err) {
-    console.log(err)
-    res.status(500).json({ error: 'Server error' })
+    res.status(500).json({ error: err.message })
   }
 }
