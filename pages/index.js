@@ -1,22 +1,13 @@
 import { useState } from 'react'
+import { useRouter } from 'next/router'
 
 export default function Home() {
   const [id, setId] = useState('')
-  const [data, setData] = useState(null)
-  const [notFound, setNotFound] = useState(false)
+  const router = useRouter()
 
-  const verify = async () => {
-    setNotFound(false)
-    setData(null)
-
-    const res = await fetch('/api/verify?id=' + id)
-
-    if (res.status === 200) {
-      const result = await res.json()
-      setData(result)
-    } else {
-      setNotFound(true)
-    }
+  const handleVerify = () => {
+    if (!id) return
+    router.push(`/verify/${id}`)
   }
 
   return (
@@ -29,13 +20,15 @@ export default function Home() {
       justifyContent:'center'
     }}>
 
-      {/* Logo */}
+      {/* LOGO */}
       <img src="/logo.png" width="120" />
 
+      {/* TITLE */}
       <h1 style={{color:'#FF8FB1'}}>
         ShineHope Foundation
       </h1>
 
+      {/* CARD */}
       <div style={{
         background:'white',
         padding:'40px',
@@ -47,12 +40,12 @@ export default function Home() {
         <h2>Certificate Verification</h2>
 
         <input
-          placeholder="Enter Credential ID"
+          placeholder="Enter Credential ID (e.g. SHF-VOL-2026-001)"
           value={id}
           onChange={(e)=>setId(e.target.value)}
           style={{
             padding:'12px',
-            width:'80%',
+            width:'85%',
             borderRadius:'8px',
             border:'1px solid #ddd'
           }}
@@ -61,7 +54,7 @@ export default function Home() {
         <br/><br/>
 
         <button
-          onClick={verify}
+          onClick={handleVerify}
           style={{
             background:'#FFD966',
             border:'none',
@@ -73,25 +66,9 @@ export default function Home() {
         >
           Verify Certificate
         </button>
-
-        {/* RESULT */}
-        {data && (
-          <div style={{marginTop:'20px'}}>
-            <h3 style={{color:'green'}}>Certificate Valid</h3>
-            <p><b>Name:</b> {data.name}</p>
-            <p><b>Program:</b> {data.program}</p>
-            <p><b>Credential ID:</b> {data.id}</p>
-            <p><b>Date:</b> {data.date}</p>
-          </div>
-        )}
-
-        {notFound && (
-          <div style={{marginTop:'20px'}}>
-            <h3 style={{color:'red'}}>Certificate Not Found</h3>
-          </div>
-        )}
       </div>
 
+      {/* FOOTER */}
       <p style={{marginTop:'20px', color:'#888'}}>
         © 2026 ShineHope Foundation
       </p>
