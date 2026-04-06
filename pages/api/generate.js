@@ -48,7 +48,7 @@ export default async function handler(req, res) {
     const code = program.substring(0,3).toUpperCase()
 
     const id = `SHF-${year}-${code}-${String(number).padStart(3, '0')}`
-    const qr = await QRCode.toDataURL(`https://namaproject.vercel.app/verify/${id}`)
+    const qr = await QRCode.toDataURL(`https://shinehope-cert.vercel.app/verify/${id}`)
 
     const newCert = {
       id,
