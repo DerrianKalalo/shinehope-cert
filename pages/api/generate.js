@@ -6,28 +6,34 @@ function generateID() {
 }
 
 export default async function handler(req, res) {
-  const { name, program } = req.body
+  try {
+    const { name, program } = req.body
 
-  const id = generateID()
-  const date = new Date().toLocaleDateString()
+    const id = generateID()
+    const date = new Date().toLocaleDateString()
 
-  const verifyURL = `https://shinehope-cert.vercel.app/verify/${id}`
-  const qr = await QRCode.toDataURL(verifyURL)
+    const verifyURL = `https://shinehope-cert.vercel.app/verify/${id}`
+    const qr = await QRCode.toDataURL(verifyURL)
 
-  // SAVE TO SUPABASE
-  const { error } = await supabase
-    .from('certificates')
-    .insert([{ id, name, program, date }])
+    const { data, error } = await supabase
+      .from('certificates')
+      .insert([{ id, name, program, date }])
 
-  if (error) {
-    return res.status(500).json({ error: 'Database error' })
+    if (error) {
+      console.log(error)
+      return res.status(500).json({ error: error.message })
+    }
+
+    res.status(200).json({
+      id,
+      name,
+      program,
+      date,
+      qr
+    })
+
+  } catch (err) {
+    console.log(err)
+    res.status(500).json({ error: 'Server error' })
   }
-
-  res.status(200).json({
-    id,
-    name,
-    program,
-    date,
-    qr
-  })
 }
