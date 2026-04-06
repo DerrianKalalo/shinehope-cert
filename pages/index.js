@@ -40,7 +40,7 @@ export default function Home() {
         <h2>Certificate Verification</h2>
 
         <input
-          placeholder="Enter Credential ID (e.g. SHF-VOL-2026-001)"
+          placeholder="Enter Credential ID"
           value={id}
           onChange={(e)=>setId(e.target.value)}
           style={{
