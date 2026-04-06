@@ -1,134 +1,68 @@
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/router'
-import * as XLSX from 'xlsx'
-import Papa from 'papaparse'
+import { useEffect, useState } from 'react'
 
 export default function Admin() {
-  const router = useRouter()
-
-  const [name, setName] = useState('')
-  const [program, setProgram] = useState('Leadership')
-  const [result, setResult] = useState(null)
   const [certs, setCerts] = useState([])
+  const [name, setName] = useState('')
+  const [program, setProgram] = useState('Volunteer')
 
-  useEffect(()=>{
-    if (!localStorage.getItem('admin')) {
-      router.push('/login')
-    }
-    loadCertificates()
-  },[])
-
-  const loadCertificates = async () => {
-    const res = await fetch('/api/verify')
+  // FETCH DATA
+  const fetchData = async () => {
+    const res = await fetch('/api/list')
     const data = await res.json()
     setCerts(data)
   }
 
-  const generate = async () => {
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  // GENERATE
+  const handleGenerate = async () => {
     const res = await fetch('/api/generate', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, program })
     })
 
-    const data = await res.json()
-    setResult(data)
-    loadCertificates()
+    await fetchData()
+    setName('')
   }
 
-  const deleteCert = async (id) => {
-    await fetch('/api/verify', {
-      method:'DELETE',
-      headers:{'Content-Type':'application/json'},
+  // DELETE
+  const handleDelete = async (id) => {
+    if (!confirm('Delete this certificate?')) return
+
+    await fetch('/api/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id })
     })
 
-    loadCertificates()
-  }
-
-  const copyID = (id) => {
-    navigator.clipboard.writeText(id)
-    alert('Copied: ' + id)
-  }
-
-  const exportExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(certs)
-    const workbook = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Certificates")
-    XLSX.writeFile(workbook, "certificates.xlsx")
-  }
-
-  const uploadCSV = (e) => {
-    const file = e.target.files[0]
-
-    Papa.parse(file, {
-      header: true,
-      complete: async function(results) {
-        const participants = results.data.map(r => ({
-          name: r.Name,
-          program: r.Program
-        }))
-
-        await fetch('/api/generate', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ participants })
-        })
-
-        alert('Mass certificates generated')
-        loadCertificates()
-      }
-    })
+    fetchData()
   }
 
   return (
-    <div style={{padding:'40px', textAlign:'center'}}>
+    <div style={{ padding: 40 }}>
       <h1>Admin Dashboard</h1>
 
-      <div style={{background:'white', padding:'20px', borderRadius:'10px', width:'400px', margin:'auto'}}>
-        <h2>Generate Certificate</h2>
+      <h2>Generate Certificate</h2>
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Name"
+      />
 
-        <input
-          placeholder="Name"
-          onChange={(e)=>setName(e.target.value)}
-        />
-        <br/><br/>
+      <select value={program} onChange={(e) => setProgram(e.target.value)}>
+        <option>Volunteer</option>
+        <option>Internship</option>
+        <option>Seminar</option>
+      </select>
 
-        <select onChange={(e)=>setProgram(e.target.value)}>
-          <option>Leadership</option>
-          <option>Volunteer</option>
-          <option>Seminar</option>
-          <option>Workshop</option>
-          <option>Training</option>
-        </select>
-        <br/><br/>
-
-        <button onClick={generate}>Generate</button>
-
-        {result && (
-          <div>
-            <h3>Credential ID:</h3>
-            <h2>{result.id}</h2>
-            <button onClick={()=>copyID(result.id)}>Copy ID</button>
-            <br/>
-            <img src={result.qr} width="120"/>
-          </div>
-        )}
-      </div>
-
-      <br/>
-
-      <h2>Upload CSV Participants</h2>
-      <input type="file" accept=".csv" onChange={uploadCSV} />
-
-      <br/><br/>
-      <button onClick={exportExcel}>Export Excel</button>
-
-      <br/><br/>
+      <button onClick={handleGenerate}>Generate</button>
 
       <h2>Certificate List</h2>
 
-      <table border="1" style={{margin:'auto', background:'white'}}>
+      <table border="1" cellPadding="10">
         <thead>
           <tr>
             <th>Name</th>
@@ -138,20 +72,20 @@ export default function Admin() {
           </tr>
         </thead>
         <tbody>
-          {certs.map((c)=>(
+          {certs.map((c) => (
             <tr key={c.id}>
               <td>{c.name}</td>
               <td>{c.program}</td>
               <td>{c.id}</td>
               <td>
-                <button onClick={()=>copyID(c.id)}>Copy</button>
-                <button onClick={()=>deleteCert(c.id)}>Delete</button>
+                <button onClick={() => handleDelete(c.id)}>
+                  Delete
+                </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-
     </div>
   )
 }
