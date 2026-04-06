@@ -1,69 +1,33 @@
-import fs from 'fs'
-import path from 'path'
 import QRCode from 'qrcode'
+import { supabase } from '../../lib/supabase'
+
+function generateID() {
+  return 'SHF-' + Math.random().toString(36).substr(2, 9).toUpperCase()
+}
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+  const { name, program } = req.body
+
+  const id = generateID()
+  const date = new Date().toLocaleDateString()
+
+  const verifyURL = `https://shinehope-cert.vercel.app/verify/${id}`
+  const qr = await QRCode.toDataURL(verifyURL)
+
+  // SAVE TO SUPABASE
+  const { error } = await supabase
+    .from('certificates')
+    .insert([{ id, name, program, date }])
+
+  if (error) {
+    return res.status(500).json({ error: 'Database error' })
   }
 
-  try {
-    const filePath = path.join(process.cwd(), 'data', 'certificates.json')
-
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, '[]')
-    }
-
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'))
-    const year = new Date().getFullYear()
-
-    // MASS GENERATE (CSV)
-    if (req.body.participants) {
-      const participants = req.body.participants
-      let newCerts = []
-
-      for (let p of participants) {
-        const number = data.length + newCerts.length + 1
-        const code = p.program.substring(0,3).toUpperCase()
-
-        const id = `SHF-${year}-${code}-${String(number).padStart(3, '0')}`
-
-        newCerts.push({
-          id,
-          name: p.name,
-          program: p.program,
-          date: new Date().toLocaleDateString()
-        })
-      }
-
-      const finalData = [...data, ...newCerts]
-      fs.writeFileSync(filePath, JSON.stringify(finalData, null, 2))
-
-      return res.status(200).json({ message: 'Mass generated' })
-    }
-
-    // SINGLE GENERATE
-    const { name, program } = req.body
-    const number = data.length + 1
-    const code = program.substring(0,3).toUpperCase()
-
-    const id = `SHF-${year}-${code}-${String(number).padStart(3, '0')}`
-    const qr = await QRCode.toDataURL(`https://shinehope-cert.vercel.app/verify/${id}`)
-
-    const newCert = {
-      id,
-      name,
-      program,
-      date: new Date().toLocaleDateString()
-    }
-
-    data.push(newCert)
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2))
-
-    res.status(200).json({ id, qr })
-
-  } catch (err) {
-    console.log(err)
-    res.status(500).json({ error: 'Server Error' })
-  }
+  res.status(200).json({
+    id,
+    name,
+    program,
+    date,
+    qr
+  })
 }
